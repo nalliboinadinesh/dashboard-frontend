@@ -1,28 +1,24 @@
 import axios from 'axios';
 import { Tenant, Ticket, DashboardData, TicketCategory, HostelInfo } from '../types';
 
-// Fallback to local storage for fully functional interactive dummy mock data
-const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://13.60.202.87:4000/api';
+/**
+ * Single source of truth for the backend URL.
+ * Set NEXT_PUBLIC_API_URL in .env.local — must be HTTPS in production
+ * to avoid mixed-content blocks when the frontend is served over HTTPS.
+ *
+ * Default fallback is the production render URL (HTTPS).
+ */
+const API_URL =
+  process.env.NEXT_PUBLIC_API_URL || 'https://hostelmanegemnt.onrender.com/api';
 
+/** Shared axios instance — all calls go through this */
 const api = axios.create({
   baseURL: API_URL,
-  headers: {
-    'Content-Type': 'application/json',
-  },
+  headers: { 'Content-Type': 'application/json' },
 });
 
-// Interceptor to attach JWT token
-api.interceptors.request.use((config) => {
-  if (typeof window !== 'undefined') {
-    const token = localStorage.getItem('tenant_token');
-    if (token && config.headers) {
-      config.headers.Authorization = `Bearer ${token}`;
-    }
-  }
-  return config;
-});
+// ─── Mock data ────────────────────────────────────────────────────────────────
 
-// Helper for Mock Data
 const MOCK_TENANT: Tenant = {
   id: 'T-10824',
   name: 'Aryan Sharma',
@@ -34,297 +30,269 @@ const MOCK_TENANT: Tenant = {
   monthlyFee: 12500,
   dueAmount: 0,
   paymentStatus: 'Paid',
-  joinDate: '2025-08-15'
+  joinDate: '2025-08-15',
 };
 
-const MOCK_FACILITIES = ['WiFi', 'AC', 'Attached Bathroom', 'Laundry', 'Food Included', 'Gym Access', 'Power Backup'];
+const MOCK_FACILITIES = [
+  'WiFi', 'AC', 'Attached Bathroom', 'Laundry',
+  'Food Included', 'Gym Access', 'Power Backup',
+];
 
 const MOCK_TICKETS: Ticket[] = [
   {
     id: 'TCK-4819',
     title: 'AC is not cooling properly',
-    description: 'The AC in room A-304 is blowing normal air instead of cool air. It has been happening since yesterday morning. Please send a technician to check it.',
+    description:
+      'The AC in room A-304 is blowing normal air instead of cool air. It has been happening since yesterday morning.',
     category: 'Electrical',
     status: 'In Progress',
     date: '2026-05-16',
-    imageUrl: 'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&auto=format&fit=crop'
+    imageUrl:
+      'https://images.unsplash.com/photo-1621905251189-08b45d6a269e?w=500&auto=format&fit=crop',
   },
   {
     id: 'TCK-4802',
     title: 'Bathroom tap leak',
-    description: 'The water tap in the attached bathroom is leaking continuously, causing water wastage. Need to change the washer or tap.',
+    description:
+      'The water tap in the attached bathroom is leaking continuously, causing water wastage.',
     category: 'Water',
     status: 'Resolved',
-    date: '2026-05-12'
+    date: '2026-05-12',
   },
   {
     id: 'TCK-4720',
     title: 'Slow internet connection speed',
-    description: 'The internet speed has dropped below 5Mbps today. Usually it is around 100Mbps. It is very hard to work or attend lectures.',
+    description:
+      'The internet speed has dropped below 5 Mbps today. Usually it is around 100 Mbps.',
     category: 'Internet',
     status: 'Resolved',
-    date: '2026-05-02'
-  }
+    date: '2026-05-02',
+  },
 ];
 
-// Initialize localStorage with dummy mock data if not exists
 const initializeMockData = () => {
-  if (typeof window !== 'undefined') {
-    if (!localStorage.getItem('mock_tenant')) {
-      localStorage.setItem('mock_tenant', JSON.stringify(MOCK_TENANT));
-    }
-    if (!localStorage.getItem('mock_tickets')) {
-      localStorage.setItem('mock_tickets', JSON.stringify(MOCK_TICKETS));
-    }
-    if (!localStorage.getItem('mock_facilities')) {
-      localStorage.setItem('mock_facilities', JSON.stringify(MOCK_FACILITIES));
-    }
-  }
+  if (typeof window === 'undefined') return;
+  if (!localStorage.getItem('mock_tenant'))
+    localStorage.setItem('mock_tenant', JSON.stringify(MOCK_TENANT));
+  if (!localStorage.getItem('mock_tickets'))
+    localStorage.setItem('mock_tickets', JSON.stringify(MOCK_TICKETS));
+  if (!localStorage.getItem('mock_facilities'))
+    localStorage.setItem('mock_facilities', JSON.stringify(MOCK_FACILITIES));
 };
 
-// Simulate API delay
-const delay = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
+const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+const mapTicketStatus = (s: string) =>
+  s === 'open' ? 'Pending' : s === 'in-progress' ? 'In Progress' : 'Resolved';
+
+const mapApiTicket = (t: any): Ticket => ({
+  id: t._id,
+  title: t.title,
+  description: t.description,
+  category: t.category,
+  status: mapTicketStatus(t.status) as Ticket['status'],
+  date: t.createdAt
+    ? new Date(t.createdAt).toISOString().split('T')[0]
+    : new Date().toISOString().split('T')[0],
+  imageUrl: t.imageLink || undefined,
+});
+
+// ─── Auth service ─────────────────────────────────────────────────────────────
 
 export const authService = {
-  login: async (email: string, password: string): Promise<{ token: string; tenant: Tenant }> => {
+  login: async (
+    email: string,
+    password: string
+  ): Promise<{ token: string; tenant: Tenant }> => {
     initializeMockData();
-    await delay(1200); // realistic network delay
+    await delay(1200);
 
-    // Try actual API first
     try {
-      const response = await api.post('/auth/login', { email, password });
-      return response.data;
-    } catch (err) {
-      console.log('API call failed or not configured, falling back to mock authentication', err);
-      
-      // Simple mock validation (accept any email, check password is not empty)
+      const { data } = await api.post('/auth/login', { email, password });
+      return data;
+    } catch {
+      // Mock fallback — accepts any email + password ≥ 4 chars
       if (email && password.length >= 4) {
-        const tenant = JSON.parse(localStorage.getItem('mock_tenant') || JSON.stringify(MOCK_TENANT));
-        // Customize mock user email if they typed something else
+        const tenant = JSON.parse(
+          localStorage.getItem('mock_tenant') || JSON.stringify(MOCK_TENANT)
+        );
         if (email.includes('@')) {
           tenant.email = email;
-          tenant.name = email.split('@')[0].split('.').map(s => s.charAt(0).toUpperCase() + s.slice(1)).join(' ');
+          tenant.name = email
+            .split('@')[0]
+            .split('.')
+            .map((s: string) => s.charAt(0).toUpperCase() + s.slice(1))
+            .join(' ');
         }
         localStorage.setItem('mock_tenant', JSON.stringify(tenant));
         const token = 'mock-jwt-token-xyz-12345';
         localStorage.setItem('tenant_token', token);
         return { token, tenant };
-      } else {
-        throw new Error('Invalid email or password (min 4 characters).');
       }
+      throw new Error('Invalid email or password (min 4 characters).');
     }
   },
 
-  logout: async () => {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('tenant_token');
-    }
-  }
+  logout: () => {
+    if (typeof window !== 'undefined') localStorage.removeItem('tenant_token');
+  },
 };
+
+// ─── Tenant service ───────────────────────────────────────────────────────────
 
 export const tenantService = {
   /**
-   * Fetch tenant dashboard.
+   * POST /api/dashboard  — body: { token }
    *
-   * Per API spec (§12), the tenant dashboard endpoint is:
-   *   POST /api/dashboard
-   *   Body: { token: "<dashboard-jwt>" }
-   *
-   * The token is the permanent JWT generated when the tenant was
-   * created — NOT an owner JWT, NOT sent as Authorization header.
+   * Per API spec §12, tenant dashboard auth uses the JWT in the request
+   * BODY, not as an Authorization header (which is for owner routes only).
    */
   getDashboard: async (token?: string): Promise<DashboardData> => {
-    const activeToken = token || (typeof window !== 'undefined' ? localStorage.getItem('tenant_token') : null);
-    const isLiveToken = activeToken && activeToken !== 'mock-jwt-token-xyz-12345';
+    const activeToken =
+      token ||
+      (typeof window !== 'undefined' ? localStorage.getItem('tenant_token') : null);
+    const isLiveToken =
+      activeToken && activeToken !== 'mock-jwt-token-xyz-12345';
 
     if (isLiveToken) {
       try {
-        console.log('[Dashboard] POST /api/dashboard with body token:', activeToken.substring(0, 20) + '...');
+        const { data } = await api.post('/dashboard', { token: activeToken });
 
-        // ✅ Correct: token goes in the REQUEST BODY, not Authorization header
-        const response = await axios.post(
-          `${API_URL}/dashboard`,
-          { token: activeToken },
-          { headers: { 'Content-Type': 'application/json' } }
-        );
+        const t = data.tenant || {};
+        const h = data.hostel || {};
+        const r = data.room || {};
+        const p = data.payments || {};
 
-        const data = response.data;
-        console.log('[Dashboard] Success:', data);
-
-        const backendTenant = data.tenant || {};
-        const backendHostel = data.hostel || {};
-        const backendRoom = data.room || {};
-        const backendPayments = data.payments || {};
-
-        const paymentStatusMap: Record<string, string> = {
+        const statusMap: Record<string, string> = {
           pending: 'Pending',
           paid: 'Paid',
           unpaid: 'Unpaid',
           overdue: 'Overdue',
         };
 
-        const rawStatus = (backendTenant.paymentStatus || '').toLowerCase();
-        const mappedStatus = paymentStatusMap[rawStatus] || 'Pending';
-
         const mappedTenant: Tenant = {
-          id: backendTenant.id || 'N/A',
-          name: backendTenant.name || 'Tenant',
-          email: backendTenant.email || '',
-          phone: backendTenant.phoneNumber || '',
-          roomNo: backendRoom.roomNumber || 'N/A',
-          roomType: backendRoom.roomType || 'N/A',
-          hostelName: backendHostel.hostelName || 'Hostel',
-          monthlyFee: backendPayments.monthlyRent || 0,
-          dueAmount: backendPayments.totalDues || 0,
-          paymentStatus: mappedStatus as any,
-          joinDate: backendTenant.joinedDate
-            ? new Date(backendTenant.joinedDate).toISOString().split('T')[0]
+          id: t.id || 'N/A',
+          name: t.name || 'Tenant',
+          email: t.email || '',
+          phone: t.phoneNumber || '',
+          roomNo: r.roomNumber || 'N/A',
+          roomType: r.roomType || 'N/A',
+          hostelName: h.hostelName || 'Hostel',
+          monthlyFee: p.monthlyRent || 0,
+          dueAmount: p.totalDues || 0,
+          paymentStatus: (statusMap[(t.paymentStatus || '').toLowerCase()] || 'Pending') as any,
+          joinDate: t.joinedDate
+            ? new Date(t.joinedDate).toISOString().split('T')[0]
             : '',
         };
 
-        const facilities =
+        const storedFacilities =
           typeof window !== 'undefined'
             ? JSON.parse(localStorage.getItem('mock_facilities') || '[]')
-            : ['WiFi', 'AC', 'Attached Bathroom', 'Food Included'];
+            : [];
 
-        const backendHostelMapped: HostelInfo = {
-          id: backendHostel.id || '',
-          hostelName: backendHostel.hostelName || '',
-          hostelType: backendHostel.hostelType || '',
-          ownerName: backendHostel.ownerName || '',
-          email: backendHostel.email || '',
-          ownerNumber: backendHostel.ownerNumber || '',
+        const hostelMapped: HostelInfo = {
+          id: h.id || '',
+          hostelName: h.hostelName || '',
+          hostelType: h.hostelType || '',
+          ownerName: h.ownerName || '',
+          email: h.email || '',
+          ownerNumber: h.ownerNumber || '',
         };
 
-        // Tickets from the dashboard response itself
-        const recentTickets = (data.tickets || []).slice(0, 2).map((t: any) => ({
-          id: t._id,
-          title: t.title,
-          description: t.description,
-          category: t.category,
-          status:
-            t.status === 'open'
-              ? 'Pending'
-              : t.status === 'in-progress'
-              ? 'In Progress'
-              : 'Resolved',
-          date: t.createdAt
-            ? new Date(t.createdAt).toISOString().split('T')[0]
-            : new Date().toISOString().split('T')[0],
-          imageUrl: t.imageLink || undefined,
-        }));
+        const recentTickets = (data.tickets || []).slice(0, 2).map(mapApiTicket);
 
         return {
           tenant: mappedTenant,
-          facilities: facilities.length > 0 ? facilities : ['WiFi', 'AC', 'Attached Bathroom', 'Food Included'],
+          facilities:
+            storedFacilities.length > 0
+              ? storedFacilities
+              : ['WiFi', 'AC', 'Attached Bathroom', 'Food Included'],
           recentTickets,
-          hostel: backendHostelMapped,
-          room: backendRoom,
-          payments: backendPayments,
+          hostel: hostelMapped,
+          room: r,
+          payments: p,
         };
       } catch (err: any) {
-        console.error('[Dashboard] API error:', err);
-
+        // 401/404 are expected (stale token) — handle silently via message classification
         const status = err.response?.status;
-        const backendError = err.response?.data?.message || err.response?.data?.error;
+        const msg = err.response?.data?.message || err.response?.data?.error;
 
-        // 400 = Token is required / bad payload
-        if (status === 400) {
-          throw new Error(backendError || 'Invalid request. Please re-open your dashboard link.');
-        }
-        // 401 = Invalid token / expired / tenant deleted
+        if (status === 400)
+          throw new Error(msg || 'Invalid request. Please re-open your dashboard link.');
         if (status === 401) {
-          // Clear the bad token so the user is sent to login
           if (typeof window !== 'undefined') localStorage.removeItem('tenant_token');
-          throw new Error(backendError || 'Your session has expired. Please use the link from your email.');
+          throw new Error(msg || 'Your session has expired. Please use the link from your email.');
         }
-        // 404 = Tenant not found / hostel deleted
         if (status === 404) {
           if (typeof window !== 'undefined') localStorage.removeItem('tenant_token');
-          throw new Error(backendError || 'Your account was not found. Please contact hostel management.');
+          throw new Error(msg || 'Your account was not found. Please contact hostel management.');
         }
-        if (status >= 500) {
+        if (status >= 500)
           throw new Error('Server is temporarily unavailable. Please try again in a moment.');
-        }
 
-        throw new Error(backendError || 'Failed to fetch dashboard data. Please try again.');
+        // Network / no-response error
+        throw new Error('Could not reach the server. Check your connection and try again.');
       }
     }
-
-    // ── Mock fallback for demo / development ──────────────────────────────────
     initializeMockData();
     await delay(1000);
-
-    const tenant = JSON.parse(localStorage.getItem('mock_tenant') || JSON.stringify(MOCK_TENANT));
-    const tickets = JSON.parse(localStorage.getItem('mock_tickets') || JSON.stringify(MOCK_TICKETS));
-    const facilities = JSON.parse(localStorage.getItem('mock_facilities') || JSON.stringify(MOCK_FACILITIES));
-
     return {
-      tenant,
-      facilities,
-      recentTickets: tickets.slice(0, 2),
+      tenant: JSON.parse(localStorage.getItem('mock_tenant') || JSON.stringify(MOCK_TENANT)),
+      facilities: JSON.parse(localStorage.getItem('mock_facilities') || JSON.stringify(MOCK_FACILITIES)),
+      recentTickets: JSON.parse(localStorage.getItem('mock_tickets') || JSON.stringify(MOCK_TICKETS)).slice(0, 2),
     };
   },
 
   updateProfile: async (profileData: Partial<Tenant>): Promise<Tenant> => {
     initializeMockData();
     await delay(1000);
-
     try {
-      const response = await api.put('/tenant/profile', profileData);
-      return response.data;
-    } catch (err) {
-      console.log('API call failed, falling back to mock update profile', err);
-      const tenant = JSON.parse(localStorage.getItem('mock_tenant') || JSON.stringify(MOCK_TENANT));
-      const updatedTenant = { ...tenant, ...profileData };
-      localStorage.setItem('mock_tenant', JSON.stringify(updatedTenant));
-      return updatedTenant;
+      const { data } = await api.put('/tenant/profile', profileData);
+      return data;
+    } catch {
+      const tenant = JSON.parse(
+        localStorage.getItem('mock_tenant') || JSON.stringify(MOCK_TENANT)
+      );
+      const updated = { ...tenant, ...profileData };
+      localStorage.setItem('mock_tenant', JSON.stringify(updated));
+      return updated;
     }
   },
 
-  register: async (tenantData: {
-    floorNumber: number;
-    roomNumber: string;
-    name: string;
-    phoneNumber: string;
-    email: string;
-    address: string;
-    parentNumber: string;
-    aadhaarNumber: string;
-    occupation: string;
-    joinedDate: string;
-    monthlyFee: number;
-    deposit: number;
-  }, token?: string): Promise<void> => {
-    await delay(1500);
-    console.log('Initiating POST request to backend...');
-    console.log('URL: http://13.60.202.87:4000/api/temporary-tenant/submit');
-    console.log('Payload:', tenantData);
-    console.log('Token present:', !!token);
-    try {
-      const headers = token ? { Authorization: `Bearer ${token}` } : {};
-      const response = await axios.post('http://13.60.202.87:4000/api/temporary-tenant/submit', tenantData, { headers });
-      console.log('POST request succeeded with status:', response.status);
-    } catch (err: any) {
-      console.error('API call failed in tenantService.register:', err);
-      if (err.response) {
-        console.error('Response error data:', err.response.data);
-        console.error('Response error status:', err.response.status);
-      }
-      throw err;
-    }
+  /** POST /api/temporary-tenant/submit  (form token as Bearer) */
+  register: async (
+    tenantData: {
+      floorNumber: number;
+      roomNumber: string;
+      name: string;
+      phoneNumber: string;
+      email: string;
+      address: string;
+      parentNumber: string;
+      aadhaarNumber: string;
+      occupation: string;
+      joinedDate: string;
+      monthlyFee: number;
+      deposit: number;
+    },
+    formToken?: string
+  ): Promise<void> => {
+    const headers = formToken ? { Authorization: `Bearer ${formToken}` } : {};
+    await api.post('/temporary-tenant/submit', tenantData, { headers });
   },
 
-  getHostelRooms: async (hostelId: string, token: string): Promise<any> => {
+  /** GET /api/room/:hostelId  (owner Bearer token) */
+  getHostelRooms: async (hostelId: string, ownerToken: string): Promise<any> => {
     try {
-      const response = await axios.get(`http://13.60.202.87:4000/api/room/${hostelId}`, {
-        headers: {
-          Authorization: `Bearer ${token}`
-        }
+      const { data } = await api.get(`/room/${hostelId}`, {
+        headers: { Authorization: `Bearer ${ownerToken}` },
       });
-      return response.data;
-    } catch (err) {
-      console.log('Failed to fetch rooms from hostelmanegemnt API, falling back to mock rooms:', err);
+      return data;
+    } catch {
+      // Mock fallback
       return {
         rooms: [
           { _id: 'r1', roomNumber: '101', floorId: { floorNumber: 1 } },
@@ -332,128 +300,92 @@ export const tenantService = {
           { _id: 'r3', roomNumber: '201', floorId: { floorNumber: 2 } },
           { _id: 'r4', roomNumber: '202', floorId: { floorNumber: 2 } },
           { _id: 'r5', roomNumber: '301', floorId: { floorNumber: 3 } },
-          { _id: 'r6', roomNumber: '302', floorId: { floorNumber: 3 } }
-        ]
+          { _id: 'r6', roomNumber: '302', floorId: { floorNumber: 3 } },
+        ],
       };
-    }
-  }
-};
-
-export const ticketService = {
-  getTickets: async (token?: string): Promise<Ticket[]> => {
-    const activeToken = token || (typeof window !== 'undefined' ? localStorage.getItem('tenant_token') : null);
-    const isLiveToken = activeToken && activeToken !== 'mock-jwt-token-xyz-12345';
-
-    if (isLiveToken) {
-      try {
-        const response = await axios.post(`http://13.60.202.87:4000/api/dashboard/tickets`, {
-          token: activeToken
-        });
-        const tickets = response.data.tickets || [];
-        return tickets.map((t: any) => ({
-          id: t._id,
-          title: t.title,
-          description: t.description,
-          category: t.category,
-          status: t.status === 'open' ? 'Pending' : t.status === 'in-progress' ? 'In Progress' : 'Resolved',
-          date: t.createdAt ? new Date(t.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-          imageUrl: t.imageLink || undefined
-        }));
-      } catch (err: any) {
-        console.error('Failed to fetch live tickets:', err);
-        throw new Error('Failed to load tickets. Please try again later.');
-      }
-    }
-
-    initializeMockData();
-    await delay(1000);
-
-    try {
-      const response = await api.get('/tickets');
-      return response.data;
-    } catch (err) {
-      console.log('API call failed, falling back to mock tickets retrieval', err);
-      return JSON.parse(localStorage.getItem('mock_tickets') || JSON.stringify(MOCK_TICKETS));
     }
   },
+};
 
-  raiseTicket: async (ticketData: { title: string; description: string; category: TicketCategory; imageUrl?: string }, token?: string): Promise<Ticket> => {
-    const activeToken = token || (typeof window !== 'undefined' ? localStorage.getItem('tenant_token') : null);
+// ─── Ticket service ───────────────────────────────────────────────────────────
+
+export const ticketService = {
+  /** POST /api/dashboard/tickets  — body: { token } */
+  getTickets: async (token?: string): Promise<Ticket[]> => {
+    const activeToken =
+      token ||
+      (typeof window !== 'undefined' ? localStorage.getItem('tenant_token') : null);
     const isLiveToken = activeToken && activeToken !== 'mock-jwt-token-xyz-12345';
 
     if (isLiveToken) {
-      try {
-        const response = await axios.post(`http://13.60.202.87:4000/api/dashboard/ticket`, {
-          token: activeToken,
-          title: ticketData.title,
-          category: ticketData.category,
-          description: ticketData.description,
-          imageLink: ticketData.imageUrl || null
-        });
-        const t = response.data.ticket;
-        return {
-          id: t._id,
-          title: t.title,
-          description: t.description,
-          category: t.category,
-          status: t.status === 'open' ? 'Pending' : t.status === 'in-progress' ? 'In Progress' : 'Resolved',
-          date: t.createdAt ? new Date(t.createdAt).toISOString().split('T')[0] : new Date().toISOString().split('T')[0],
-          imageUrl: t.imageLink || undefined
-        };
-      } catch (err: any) {
-        console.error('Failed to raise live ticket:', err);
-        throw new Error('Failed to raise ticket. Please try again later.');
-      }
+      const { data } = await api.post('/dashboard/tickets', { token: activeToken });
+      return (data.tickets || []).map(mapApiTicket);
     }
 
+    // Mock fallback
+    initializeMockData();
+    await delay(1000);
+    return JSON.parse(localStorage.getItem('mock_tickets') || JSON.stringify(MOCK_TICKETS));
+  },
+
+  /** POST /api/dashboard/ticket  — body: { token, title, category, description, imageLink } */
+  raiseTicket: async (
+    ticketData: { title: string; description: string; category: TicketCategory; imageUrl?: string },
+    token?: string
+  ): Promise<Ticket> => {
+    const activeToken =
+      token ||
+      (typeof window !== 'undefined' ? localStorage.getItem('tenant_token') : null);
+    const isLiveToken = activeToken && activeToken !== 'mock-jwt-token-xyz-12345';
+
+    if (isLiveToken) {
+      const { data } = await api.post('/dashboard/ticket', {
+        token: activeToken,
+        title: ticketData.title,
+        category: ticketData.category,
+        description: ticketData.description,
+        imageLink: ticketData.imageUrl || null,
+      });
+      return mapApiTicket(data.ticket);
+    }
+
+    // Mock fallback
     initializeMockData();
     await delay(1500);
-
-    try {
-      const response = await api.post('/tickets', ticketData);
-      return response.data;
-    } catch (err) {
-      console.log('API call failed, falling back to mock ticket raise', err);
-      const tickets = JSON.parse(localStorage.getItem('mock_tickets') || JSON.stringify(MOCK_TICKETS));
-      
-      const newTicket: Ticket = {
-        id: `TCK-${Math.floor(1000 + Math.random() * 9000)}`,
-        title: ticketData.title,
-        description: ticketData.description,
-        category: ticketData.category,
-        status: 'Pending',
-        date: new Date().toISOString().split('T')[0],
-        imageUrl: ticketData.imageUrl
-      };
-
-      tickets.unshift(newTicket);
-      localStorage.setItem('mock_tickets', JSON.stringify(tickets));
-      return newTicket;
-    }
+    const tickets = JSON.parse(
+      localStorage.getItem('mock_tickets') || JSON.stringify(MOCK_TICKETS)
+    );
+    const newTicket: Ticket = {
+      id: `TCK-${Math.floor(1000 + Math.random() * 9000)}`,
+      title: ticketData.title,
+      description: ticketData.description,
+      category: ticketData.category,
+      status: 'Pending',
+      date: new Date().toISOString().split('T')[0],
+      imageUrl: ticketData.imageUrl,
+    };
+    tickets.unshift(newTicket);
+    localStorage.setItem('mock_tickets', JSON.stringify(tickets));
+    return newTicket;
   },
 
   uploadImage: async (file: File): Promise<string> => {
     await delay(1000);
-
     try {
-      const formData = new FormData();
-      formData.append('image', file);
-      const response = await api.post('/tickets/upload', formData, {
-        headers: {
-          'Content-Type': 'multipart/form-data',
-        },
+      const form = new FormData();
+      form.append('image', file);
+      const { data } = await api.post('/tickets/upload', form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
       });
-      return response.data.imageUrl;
-    } catch (err) {
-      console.log('API call failed, converting image to base64 mock URL', err);
+      return data.imageUrl;
+    } catch {
+      // Convert to base64 as fallback
       return new Promise((resolve, reject) => {
         const reader = new FileReader();
-        reader.onloadend = () => {
-          resolve(reader.result as string);
-        };
+        reader.onloadend = () => resolve(reader.result as string);
         reader.onerror = reject;
         reader.readAsDataURL(file);
       });
     }
-  }
+  },
 };

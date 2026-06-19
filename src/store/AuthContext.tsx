@@ -134,23 +134,26 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           setUser(data.tenant);
           if (pathname === '/login') router.push('/');
         } catch (err: any) {
-          console.error('Session verification failed:', err);
-          // For live tokens that fail with auth errors, clear the bad token
-          // so the user is redirected to login rather than stuck in a retry loop
-          const isBadToken =
-            err.message?.includes('expired') ||
-            err.message?.includes('not found') ||
-            err.message?.includes('Invalid token') ||
-            err.message?.includes('session');
+          // Classify the error so we respond correctly
+          const msg: string = err.message || '';
+          const isAuthError =
+            msg.includes('expired') ||
+            msg.includes('not found') ||
+            msg.includes('Invalid token') ||
+            msg.includes('session') ||
+            msg.includes('account') ||
+            msg.includes('link');
 
-          if (storedToken !== 'mock-jwt-token-xyz-12345' && isBadToken) {
+          if (storedToken !== 'mock-jwt-token-xyz-12345' && isAuthError) {
+            // Stale / invalid token — clear silently and send to login
             localStorage.removeItem('tenant_token');
             setToken(null);
             setUser(null);
             if (pathname !== '/login') router.push('/login');
+            // Don't set dashboardError — user will land on login page
           } else {
-            // Network/server error — keep token, show error on dashboard only
-            setDashboardError(err.message || 'Could not connect. Please try again.');
+            // Network / server error — keep token, surface error on dashboard
+            setDashboardError(msg || 'Could not connect. Please try again.');
           }
         }
       } else {
