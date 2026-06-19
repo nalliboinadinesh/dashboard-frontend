@@ -15,12 +15,16 @@ export default function DashboardPage() {
     dashboardData, 
     fetchDashboard, 
     isDashboardLoading, 
-    dashboardError
+    dashboardError,
+    isLoading
   } = useAuth();
 
   useEffect(() => {
-    fetchDashboard();
-  }, [fetchDashboard]);
+    // Only fetch if auth is done AND we don't already have data
+    if (!isLoading && !dashboardData && !dashboardError) {
+      fetchDashboard();
+    }
+  }, [isLoading, dashboardData, dashboardError, fetchDashboard]);
 
   // Format today's date: "Monday, May 18, 2026"
   const getTodayDateString = () => {
@@ -34,35 +38,62 @@ export default function DashboardPage() {
   };
 
   if (dashboardError) {
+    // Determine if it's an auth/token error or a network/server error
+    const isAuthError =
+      dashboardError.includes('expired') ||
+      dashboardError.includes('not found') ||
+      dashboardError.includes('Invalid') ||
+      dashboardError.includes('session') ||
+      dashboardError.includes('link');
+
     return (
       <div className="flex flex-col items-center justify-center min-h-[60vh] px-4 max-w-md mx-auto">
         <div className="glass-panel p-8 rounded-2xl border border-rose-500/20 bg-rose-950/5 text-center space-y-6 shadow-xl relative overflow-hidden backdrop-blur-md">
-          {/* Subtle background glow */}
-          <div className="absolute -top-12 -left-12 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl"></div>
-          
+          <div className="absolute -top-12 -left-12 w-24 h-24 bg-rose-500/10 rounded-full blur-2xl" />
+
           <div className="w-16 h-16 bg-rose-500/10 border border-rose-500/20 rounded-full flex items-center justify-center mx-auto text-rose-400 shadow-[0_0_15px_rgba(239,68,68,0.1)]">
-            <AlertCircle className="w-8 h-8 animate-pulse" />
+            <AlertCircle className="w-8 h-8" />
           </div>
-          
+
           <div className="space-y-2">
-            <h2 className="text-xl font-black text-slate-100 tracking-tight">Connection Issue</h2>
+            <h2 className="text-xl font-black text-slate-100 tracking-tight">
+              {isAuthError ? 'Session Expired' : 'Connection Issue'}
+            </h2>
             <p className="text-sm text-slate-400 font-medium leading-relaxed">
               {dashboardError}
             </p>
+            {isAuthError && (
+              <p className="text-xs text-slate-500 mt-2">
+                Please use the dashboard link from your invitation email to log in again.
+              </p>
+            )}
           </div>
-          
-          <button 
-            onClick={() => fetchDashboard()}
-            className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-rose-500 to-amber-600 hover:from-rose-600 hover:to-amber-700 text-white font-extrabold text-sm transition-all duration-300 shadow-[0_4px_12px_rgba(239,68,68,0.2)] hover:shadow-[0_6px_16px_rgba(239,68,68,0.3)] hover:-translate-y-0.5 active:translate-y-0"
-          >
-            Retry Connection
-          </button>
+
+          {isAuthError ? (
+            <a
+              href="/login"
+              className="block w-full py-3 px-4 rounded-xl bg-gradient-to-r from-cyan-500 to-blue-600 text-white font-extrabold text-sm text-center transition-all"
+            >
+              Go to Login
+            </a>
+          ) : (
+            <button
+              onClick={() => fetchDashboard()}
+              disabled={isDashboardLoading}
+              className="w-full py-3 px-4 rounded-xl bg-gradient-to-r from-rose-500 to-amber-600 hover:from-rose-600 hover:to-amber-700 text-white font-extrabold text-sm transition-all duration-300 disabled:opacity-60 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+            >
+              {isDashboardLoading ? (
+                <span className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+              ) : null}
+              {isDashboardLoading ? 'Connecting...' : 'Retry Connection'}
+            </button>
+          )}
         </div>
       </div>
     );
   }
 
-  if (isDashboardLoading || !dashboardData || !user) {
+  if (isLoading || isDashboardLoading || !dashboardData || !user) {
     return <SkeletonLoader type="dashboard" />;
   }
 

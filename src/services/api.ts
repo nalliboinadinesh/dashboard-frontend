@@ -123,30 +123,44 @@ export const authService = {
 };
 
 export const tenantService = {
+  /**
+   * Fetch tenant dashboard.
+   *
+   * Per API spec (§12), the tenant dashboard endpoint is:
+   *   POST /api/dashboard
+   *   Body: { token: "<dashboard-jwt>" }
+   *
+   * The token is the permanent JWT generated when the tenant was
+   * created — NOT an owner JWT, NOT sent as Authorization header.
+   */
   getDashboard: async (token?: string): Promise<DashboardData> => {
     const activeToken = token || (typeof window !== 'undefined' ? localStorage.getItem('tenant_token') : null);
     const isLiveToken = activeToken && activeToken !== 'mock-jwt-token-xyz-12345';
 
     if (isLiveToken) {
       try {
-        console.log('Fetching live dashboard data with token:', activeToken);
-        const response = await axios.post(`http://13.60.202.87:4000/api/dashboard`, {
-          token: activeToken
-        });
-        
+        console.log('[Dashboard] POST /api/dashboard with body token:', activeToken.substring(0, 20) + '...');
+
+        // ✅ Correct: token goes in the REQUEST BODY, not Authorization header
+        const response = await axios.post(
+          `${API_URL}/dashboard`,
+          { token: activeToken },
+          { headers: { 'Content-Type': 'application/json' } }
+        );
+
         const data = response.data;
-        console.log('Successfully fetched live dashboard data:', data);
-        
+        console.log('[Dashboard] Success:', data);
+
         const backendTenant = data.tenant || {};
         const backendHostel = data.hostel || {};
         const backendRoom = data.room || {};
         const backendPayments = data.payments || {};
 
         const paymentStatusMap: Record<string, string> = {
-          'pending': 'Pending',
-          'paid': 'Paid',
-          'unpaid': 'Unpaid',
-          'overdue': 'Overdue'
+          pending: 'Pending',
+          paid: 'Paid',
+          unpaid: 'Unpaid',
+          overdue: 'Overdue',
         };
 
         const rawStatus = (backendTenant.paymentStatus || '').toLowerCase();
@@ -163,11 +177,15 @@ export const tenantService = {
           monthlyFee: backendPayments.monthlyRent || 0,
           dueAmount: backendPayments.totalDues || 0,
           paymentStatus: mappedStatus as any,
-          joinDate: backendTenant.joinedDate ? new Date(backendTenant.joinedDate).toISOString().split('T')[0] : ''
+          joinDate: backendTenant.joinedDate
+            ? new Date(backendTenant.joinedDate).toISOString().split('T')[0]
+            : '',
         };
 
-        const tickets = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('mock_tickets') || '[]') : [];
-        const facilities = typeof window !== 'undefined' ? JSON.parse(localStorage.getItem('mock_facilities') || '[]') : ['WiFi', 'AC', 'Attached Bathroom', 'Food Included'];
+        const facilities =
+          typeof window !== 'undefined'
+            ? JSON.parse(localStorage.getItem('mock_facilities') || '[]')
+            : ['WiFi', 'AC', 'Attached Bathroom', 'Food Included'];
 
         const backendHostelMapped: HostelInfo = {
           id: backendHostel.id || '',
@@ -175,42 +193,77 @@ export const tenantService = {
           hostelType: backendHostel.hostelType || '',
           ownerName: backendHostel.ownerName || '',
           email: backendHostel.email || '',
-          ownerNumber: backendHostel.ownerNumber || ''
+          ownerNumber: backendHostel.ownerNumber || '',
         };
+
+        // Tickets from the dashboard response itself
+        const recentTickets = (data.tickets || []).slice(0, 2).map((t: any) => ({
+          id: t._id,
+          title: t.title,
+          description: t.description,
+          category: t.category,
+          status:
+            t.status === 'open'
+              ? 'Pending'
+              : t.status === 'in-progress'
+              ? 'In Progress'
+              : 'Resolved',
+          date: t.createdAt
+            ? new Date(t.createdAt).toISOString().split('T')[0]
+            : new Date().toISOString().split('T')[0],
+          imageUrl: t.imageLink || undefined,
+        }));
 
         return {
           tenant: mappedTenant,
           facilities: facilities.length > 0 ? facilities : ['WiFi', 'AC', 'Attached Bathroom', 'Food Included'],
-          recentTickets: tickets.slice(0, 2),
+          recentTickets,
           hostel: backendHostelMapped,
           room: backendRoom,
-          payments: backendPayments
+          payments: backendPayments,
         };
       } catch (err: any) {
-        console.error('API call failed in tenantService.getDashboard:', err);
-        throw new Error('The data is not fetching try after some time');
+        console.error('[Dashboard] API error:', err);
+
+        const status = err.response?.status;
+        const backendError = err.response?.data?.message || err.response?.data?.error;
+
+        // 400 = Token is required / bad payload
+        if (status === 400) {
+          throw new Error(backendError || 'Invalid request. Please re-open your dashboard link.');
+        }
+        // 401 = Invalid token / expired / tenant deleted
+        if (status === 401) {
+          // Clear the bad token so the user is sent to login
+          if (typeof window !== 'undefined') localStorage.removeItem('tenant_token');
+          throw new Error(backendError || 'Your session has expired. Please use the link from your email.');
+        }
+        // 404 = Tenant not found / hostel deleted
+        if (status === 404) {
+          if (typeof window !== 'undefined') localStorage.removeItem('tenant_token');
+          throw new Error(backendError || 'Your account was not found. Please contact hostel management.');
+        }
+        if (status >= 500) {
+          throw new Error('Server is temporarily unavailable. Please try again in a moment.');
+        }
+
+        throw new Error(backendError || 'Failed to fetch dashboard data. Please try again.');
       }
     }
 
-    // Default mock data fallback
+    // ── Mock fallback for demo / development ──────────────────────────────────
     initializeMockData();
     await delay(1000);
 
-    try {
-      const response = await api.get('/tenant/dashboard');
-      return response.data;
-    } catch (err) {
-      console.log('API call failed, falling back to mock dashboard data', err);
-      const tenant = JSON.parse(localStorage.getItem('mock_tenant') || JSON.stringify(MOCK_TENANT));
-      const tickets = JSON.parse(localStorage.getItem('mock_tickets') || JSON.stringify(MOCK_TICKETS));
-      const facilities = JSON.parse(localStorage.getItem('mock_facilities') || JSON.stringify(MOCK_FACILITIES));
+    const tenant = JSON.parse(localStorage.getItem('mock_tenant') || JSON.stringify(MOCK_TENANT));
+    const tickets = JSON.parse(localStorage.getItem('mock_tickets') || JSON.stringify(MOCK_TICKETS));
+    const facilities = JSON.parse(localStorage.getItem('mock_facilities') || JSON.stringify(MOCK_FACILITIES));
 
-      return {
-        tenant,
-        facilities,
-        recentTickets: tickets.slice(0, 2)
-      };
-    }
+    return {
+      tenant,
+      facilities,
+      recentTickets: tickets.slice(0, 2),
+    };
   },
 
   updateProfile: async (profileData: Partial<Tenant>): Promise<Tenant> => {

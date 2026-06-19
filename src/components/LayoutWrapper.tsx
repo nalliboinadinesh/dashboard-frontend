@@ -44,28 +44,30 @@ export const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ childre
 
   // Dashboard layout for Authenticated pages
   return (
-    <div className="flex flex-col min-h-screen bg-[#050814]">
-      {/* Top Navbar */}
+    <div className="flex flex-col h-screen bg-[#050814] overflow-hidden">
+      {/* Top Navbar — fixed height, never scrolls */}
       <Navbar />
 
-      {/* Main Content Area */}
-      <div className="flex flex-1 relative">
-        {/* Left Desktop Sidebar */}
+      {/* Content area below navbar — fills remaining height */}
+      <div className="flex flex-1 min-h-0 relative">
+        {/* Left Desktop Sidebar — fixed height, independent scroll */}
         <Sidebar />
 
-        {/* Dynamic page content wrapped in transition wrapper */}
-        <main className="flex-1 p-4 sm:p-6 md:p-8 pb-24 md:pb-8 overflow-y-auto max-w-7xl mx-auto w-full">
-          <AnimatePresence mode="wait">
-            <motion.div
-              key={pathname}
-              initial={{ opacity: 0, y: 15 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -15 }}
-              transition={{ duration: 0.25, ease: 'easeInOut' }}
-            >
-              {children}
-            </motion.div>
-          </AnimatePresence>
+        {/* Page content — only this scrolls */}
+        <main className="flex-1 overflow-y-auto p-4 sm:p-6 md:p-8 pb-24 md:pb-8">
+          <div className="max-w-7xl mx-auto w-full">
+            <AnimatePresence mode="wait">
+              <motion.div
+                key={pathname}
+                initial={{ opacity: 0, y: 15 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -15 }}
+                transition={{ duration: 0.25, ease: 'easeInOut' }}
+              >
+                {children}
+              </motion.div>
+            </AnimatePresence>
+          </div>
         </main>
       </div>
 

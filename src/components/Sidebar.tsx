@@ -18,7 +18,7 @@ export const Sidebar: React.FC = () => {
   ];
 
   return (
-    <aside className="hidden md:flex flex-col w-64 glass-panel border-r border-white/5 min-h-[calc(100vh-65px)] p-4 shrink-0 justify-between">
+    <aside className="hidden md:flex flex-col w-64 glass-panel border-r border-white/5 h-full p-4 shrink-0 justify-between overflow-y-auto">
       {/* Navigation Links */}
       <div className="flex flex-col gap-2">
         <div className="px-3 py-2">

@@ -2,14 +2,18 @@
 
 import React, { useState } from 'react';
 import { useAuth } from '../../store/AuthContext';
-import { Mail, Lock, Eye, EyeOff, Home, ArrowRight } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, Home, ArrowRight, AlertCircle } from 'lucide-react';
+import { useSearchParams } from 'next/navigation';
+import { Suspense } from 'react';
 
-export default function LoginPage() {
+function LoginPageInner() {
   const { login, isLoading } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const searchParams = useSearchParams();
+  const error = searchParams.get('error');
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -19,7 +23,6 @@ export default function LoginPage() {
     try {
       await login(email, password);
     } catch (err) {
-      // Errors are caught and shown via toasts in AuthContext
       console.error(err);
     } finally {
       setIsSubmitting(false);
@@ -47,6 +50,16 @@ export default function LoginPage() {
             Login using credentials received on your registered email
           </p>
         </div>
+
+        {/* Error banner for invalid/missing dashboard link token */}
+        {error === 'missing_token' && (
+          <div className="mb-6 flex items-start gap-3 bg-rose-950/30 border border-rose-500/20 rounded-xl p-4">
+            <AlertCircle className="w-4 h-4 text-rose-400 mt-0.5 shrink-0" />
+            <p className="text-xs text-rose-300 leading-relaxed">
+              Your dashboard link is missing or invalid. Please use the full link from your invitation email, or log in below.
+            </p>
+          </div>
+        )}
 
         {/* Login Form */}
         <form onSubmit={handleSubmit} className="space-y-6">
@@ -127,5 +140,13 @@ export default function LoginPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense>
+      <LoginPageInner />
+    </Suspense>
   );
 }
