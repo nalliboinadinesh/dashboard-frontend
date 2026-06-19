@@ -1,0 +1,210 @@
+SOSA TENANT PORTAL — BACKEND API SPECIFICATIONS
+
+This document lists all endpoints, HTTP methods, headers, and JSON request/response structures used by the frontend portal. Please build your backend API to match these definitions.
+
+========================================================================
+1. GENERAL CONFIGURATION
+========================================================================
+- Base URL: http://13.60.202.87:4000/api
+- Content-Type: application/json
+- Authentication: Protected routes require a JWT token passed in the header:
+  Authorization: Bearer <JWT_TOKEN>
+
+========================================================================
+2. API ENDPOINTS LIST
+========================================================================
+
+------------------------------------------------------------------------
+[PUBLIC] POST /auth/login
+------------------------------------------------------------------------
+Description: Logs the tenant in and returns their details along with a JWT token.
+
+Request Payload:
+{
+  "email": "tenant@example.com",
+  "password": "secure_password_here"
+}
+
+Success Response (HTTP 200 OK):
+{
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.your-jwt-token-payload",
+  "tenant": {
+    "id": "T-10824",
+    "name": "Aryan Sharma",
+    "email": "aryan.sharma@example.com",
+    "phone": "+91 98765 43210",
+    "roomNo": "A-304",
+    "roomType": "AC",
+    "hostelName": "SOSA Elite Living",
+    "monthlyFee": 12500,
+    "dueAmount": 0,
+    "paymentStatus": "Paid",
+    "joinDate": "2025-08-15"
+  }
+}
+
+Error Response (HTTP 401 Unauthorized):
+{
+  "message": "Invalid email or password"
+}
+
+
+------------------------------------------------------------------------
+[PUBLIC] POST /tenant/register
+------------------------------------------------------------------------
+Description: Registers a new tenant profile. Access is triggered when they scan the admin QR code.
+
+Request Payload:
+{
+  "floor": "3rd Floor",
+  "room": "Room 304 (AC)",
+  "name": "Aryan Sharma",
+  "phone": "+91 98765 43210",
+  "email": "aryan.sharma@example.com",
+  "address": "123 Main Street, Bangalore",
+  "parentPhone": "+91 98765 43211",
+  "aadharNumber": "123456789012",
+  "occupation": "Software Engineer",
+  "joinedDate": "2026-05-18",
+  "monthlyFee": 12500,
+  "deposit": 25000,
+  "paymentStatus": "Pending"
+}
+
+Success Response (HTTP 201 Created):
+{
+  "success": true,
+  "message": "Tenant registration created successfully."
+}
+
+Error Response (HTTP 400 Bad Request):
+{
+  "message": "Email already registered or invalid fields"
+}
+
+
+------------------------------------------------------------------------
+[PROTECTED] GET /tenant/dashboard
+------------------------------------------------------------------------
+Description: Fetches the tenant's details, included facilities list, and recent complaints for the homepage dashboard.
+
+Headers:
+Authorization: Bearer <JWT_TOKEN>
+
+Success Response (HTTP 200 OK):
+{
+  "tenant": {
+    "id": "T-10824",
+    "name": "Aryan Sharma",
+    "email": "aryan.sharma@example.com",
+    "phone": "+91 98765 43210",
+    "roomNo": "A-304",
+    "roomType": "AC",
+    "hostelName": "SOSA Elite Living",
+    "monthlyFee": 12500,
+    "dueAmount": 0,
+    "paymentStatus": "Paid",
+    "joinDate": "2025-08-15"
+  },
+  "facilities": [
+    "WiFi",
+    "AC",
+    "Attached Bathroom",
+    "Laundry",
+    "Food Included",
+    "Gym Access",
+    "Power Backup"
+  ],
+  "recentTickets": [
+    {
+      "id": "TCK-4819",
+      "title": "AC is not cooling properly",
+      "description": "AC in room A-304 is blowing normal air instead of cool air.",
+      "category": "Electrical",
+      "status": "In Progress",
+      "date": "2026-05-16",
+      "imageUrl": "https://example.com/uploads/ac-leak.jpg"
+    }
+  ]
+}
+
+
+------------------------------------------------------------------------
+[PROTECTED] GET /tickets
+------------------------------------------------------------------------
+Description: Retrieves all support tickets raised by the authenticated tenant.
+
+Headers:
+Authorization: Bearer <JWT_TOKEN>
+
+Success Response (HTTP 200 OK):
+[
+  {
+    "id": "TCK-4819",
+    "title": "AC is not cooling properly",
+    "description": "AC in room A-304 is blowing normal air instead of cool air.",
+    "category": "Electrical",
+    "status": "In Progress",
+    "date": "2026-05-16",
+    "imageUrl": "https://example.com/uploads/ac-leak.jpg"
+  },
+  {
+    "id": "TCK-4802",
+    "title": "Bathroom tap leak",
+    "description": "The water tap in the attached bathroom is leaking continuously.",
+    "category": "Water",
+    "status": "Resolved",
+    "date": "2026-05-12"
+  }
+]
+
+
+------------------------------------------------------------------------
+[PROTECTED] POST /tickets
+------------------------------------------------------------------------
+Description: Creates a new support complaint.
+
+Headers:
+Authorization: Bearer <JWT_TOKEN>
+
+Request Payload:
+{
+  "title": "Water pressure is very low",
+  "description": "No water pressure in bathroom showers since morning.",
+  "category": "Water",
+  "imageUrl": "https://example.com/uploads/image-hash.jpg"
+}
+
+Success Response (HTTP 201 Created):
+{
+  "id": "TCK-5021",
+  "title": "Water pressure is very low",
+  "description": "No water pressure in bathroom showers since morning.",
+  "category": "Water",
+  "status": "Pending",
+  "date": "2026-05-19",
+  "imageUrl": "https://example.com/uploads/image-hash.jpg"
+}
+
+
+------------------------------------------------------------------------
+[PROTECTED] POST /tickets/upload
+------------------------------------------------------------------------
+Description: Uploads an image attachment before creating the ticket payload.
+
+Headers:
+Authorization: Bearer <JWT_TOKEN>
+Content-Type: multipart/form-data
+
+Form-Data Parameter:
+- image: binary file (File payload)
+
+Success Response (HTTP 200 OK):
+{
+  "imageUrl": "https://example.com/uploads/image-hash.jpg"
+}
+
+Error Response (HTTP 400 Bad Request):
+{
+  "message": "File format not supported or size too large"
+}

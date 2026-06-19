@@ -1,0 +1,14 @@
+[
+  {
+    "_id": "b07b920475207b997db0a79a",
+    "hostelId": "6a0e99d89417ce2f00af00a1",
+    "tenantId": "6a0ff577affb63d57c0e3257",
+    "title": "Water leakage",
+    "category": "Maintenance",
+    "description": "There is water leaking from the bathroom ceiling since yesterday.",
+    "imageLink": "https://example.com/photo.jpg",
+    "status": "open",
+    "createdAt": "2026-05-22T11:28:10.633Z",
+    "updatedAt": "2026-05-22T11:28:10.633Z"
+  }
+]
