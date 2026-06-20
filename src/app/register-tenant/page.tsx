@@ -106,13 +106,6 @@ function RegisterTenantForm() {
     e.preventDefault();
     console.log('handleRegister triggered');
 
-    // Safety check
-    if (hasExpired || (expiresAtParam && new Date(expiresAtParam) < new Date())) {
-      console.warn('Registration link has expired.');
-      showToast('Registration link has expired. Please request a new link.', 'error');
-      return;
-    }
-
     // Strict Field validations
     const validationErrors: Record<string, string> = {};
 
@@ -285,25 +278,8 @@ function RegisterTenantForm() {
     );
   }
 
-  // 2. Link Expired Error State
-  if (hasExpired || (timeLeft !== null && timeLeft <= 0)) {
-    return (
-      <div className="w-full max-w-md mx-auto bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-3xl overflow-hidden shadow-2xl p-8 text-center space-y-6">
-        <div className="w-16 h-16 mx-auto rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.15)]">
-          <ShieldAlert className="w-8 h-8 text-amber-500 animate-pulse" />
-        </div>
-        <div className="space-y-2">
-          <h2 className="text-xl font-extrabold text-slate-200">Registration Link Expired</h2>
-          <p className="text-slate-400 text-sm leading-relaxed">
-            For security reasons, hostel registration links are temporary and valid only for 15 minutes.
-          </p>
-          <div className="p-4 bg-[#0a0f1d]/85 border border-white/5 rounded-2xl text-xs text-amber-400/90 font-medium mt-4">
-            Please ask the hostel manager to generate a new QR code in the admin dashboard and scan it again.
-          </div>
-        </div>
-      </div>
-    );
-  }
+  // 2. Link Expired Warning — show banner but still allow submit (backend is the authority)
+  const isExpiredWarning = hasExpired || (timeLeft !== null && timeLeft <= 0);
 
   // 3. Success State
   if (isSuccess) {
@@ -338,10 +314,16 @@ function RegisterTenantForm() {
         </h1>
 
         {/* Real-time Token Expiry Indicator */}
-        {timeLeft !== null && (
+        {timeLeft !== null && !isExpiredWarning && (
           <div className="flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold bg-amber-500/5 border border-amber-500/15 text-amber-400 shadow-[0_0_10px_rgba(245,158,11,0.05)]">
             <Clock className="w-3.5 h-3.5 animate-pulse text-amber-500" />
             <span>Link Expires In: {formatTimeLeft(timeLeft)}</span>
+          </div>
+        )}
+        {isExpiredWarning && (
+          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold bg-rose-500/10 border border-rose-500/20 text-rose-400">
+            <ShieldAlert className="w-3.5 h-3.5" />
+            <span>Link expired — you can still try submitting</span>
           </div>
         )}
       </div>

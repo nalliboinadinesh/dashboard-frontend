@@ -11,7 +11,7 @@
 
 const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ||
-  'https://dashboard-frontend-five-rouge.vercel.app';
+  'https://dashboard-frontend-five-rough.vercel.app';
 
 export const generateTenantDashboardLink = (token: string, baseUrl?: string): string => {
   const base = baseUrl || APP_URL;
