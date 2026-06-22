@@ -23,7 +23,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="h-full scroll-smooth">
-      <body className="h-full bg-[#050814] text-slate-100 antialiased overflow-x-hidden overflow-y-hidden">
+      <body className="h-full bg-[#050814] text-slate-100 antialiased overflow-x-hidden">
         <AuthProvider>
           <LayoutWrapper>
             {children}

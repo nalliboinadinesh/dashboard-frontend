@@ -3,13 +3,16 @@ import { Tenant, Ticket, DashboardData, TicketCategory, HostelInfo } from '../ty
 
 /**
  * Single source of truth for the backend URL.
- * Set NEXT_PUBLIC_API_URL in .env.local — must be HTTPS in production
- * to avoid mixed-content blocks when the frontend is served over HTTPS.
  *
- * Default fallback is the production render URL (HTTPS).
+ * - In production (Vercel): NEXT_PUBLIC_API_URL = /api/proxy
+ *   All requests go browser → /api/proxy/* → Vercel serverless → HTTP backend
+ *   This avoids mixed-content blocks entirely.
+ *
+ * - In local dev: NEXT_PUBLIC_API_URL = http://13.60.202.87:4000/api
+ *   Direct calls work fine since localhost is not HTTPS.
  */
 const API_URL =
-  process.env.NEXT_PUBLIC_API_URL || 'https://hostelmanegemnt.onrender.com/api';
+  process.env.NEXT_PUBLIC_API_URL || '/api/proxy';
 
 /** Shared axios instance — all calls go through this */
 const api = axios.create({

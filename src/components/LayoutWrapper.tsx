@@ -33,16 +33,16 @@ export const LayoutWrapper: React.FC<{ children: React.ReactNode }> = ({ childre
     );
   }
 
-  // Standalone layout for Login / Register Page
+  // Standalone layout for Login / Register Page — must scroll freely
   if (isStandalonePage) {
     return (
-      <div className="min-h-screen w-full flex items-center justify-center bg-[#050814] py-8 px-4 overflow-y-auto">
+      <div className="min-h-screen w-full flex items-center justify-center bg-[#050814] py-8 px-4 overflow-y-auto overflow-x-hidden">
         {children}
       </div>
     );
   }
 
-  // Dashboard layout for Authenticated pages
+  // Dashboard layout — fixed height, sidebar never scrolls, only main content scrolls
   return (
     <div className="flex flex-col h-screen bg-[#050814] overflow-hidden">
       {/* Top Navbar — fixed height, never scrolls */}

@@ -37,7 +37,6 @@ function RegisterTenantForm() {
   const [joinedDate, setJoinedDate] = useState(() => new Date().toISOString().split('T')[0]);
   const [monthlyFee, setMonthlyFee] = useState('');
   const [deposit, setDeposit] = useState('');
-  const [paymentStatus, setPaymentStatus] = useState<'Pending' | 'Paid'>('Pending');
 
   // Submission states
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -278,8 +277,28 @@ function RegisterTenantForm() {
     );
   }
 
-  // 2. Link Expired Warning — show banner but still allow submit (backend is the authority)
-  const isExpiredWarning = hasExpired || (timeLeft !== null && timeLeft <= 0);
+  // 2. Link Expired — show full-page expired card, hide the form
+  if (hasExpired || (timeLeft !== null && timeLeft <= 0)) {
+    return (
+      <div className="w-full max-w-md mx-auto bg-slate-900/60 backdrop-blur-xl border border-white/5 rounded-3xl overflow-hidden shadow-2xl p-8 text-center space-y-6">
+        <div className="w-16 h-16 mx-auto rounded-full bg-amber-500/10 flex items-center justify-center border border-amber-500/20 shadow-[0_0_15px_rgba(245,158,11,0.15)]">
+          <ShieldAlert className="w-8 h-8 text-amber-500 animate-pulse" />
+        </div>
+        <div className="space-y-2">
+          <h2 className="text-xl font-extrabold text-slate-200">Registration Link Expired</h2>
+          <p className="text-slate-400 text-sm leading-relaxed">
+            For security reasons, hostel registration links are valid for 15 minutes only.
+          </p>
+          <div className="p-4 bg-[#0a0f1d]/85 border border-white/5 rounded-2xl text-xs text-amber-400/90 font-medium mt-4">
+            Please ask the hostel manager to generate a new QR code and scan it again.
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // keep isExpiredWarning false — we now block entirely above
+  const isExpiredWarning = false;
 
   // 3. Success State
   if (isSuccess) {
@@ -715,53 +734,6 @@ function RegisterTenantForm() {
                 )}
               </div>
             </div>
-          </div>
-        </div>
-
-        {/* SECTION 5: Initial Payment Status */}
-        <div className="space-y-3">
-          <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest pl-1 block">
-            Initial Payment Status
-          </label>
-
-          <div className="flex items-center gap-6 pl-1">
-            {/* Pending option */}
-            <label className="flex items-center gap-2.5 cursor-pointer group text-xs font-semibold text-slate-300">
-              <input
-                type="radio"
-                name="paymentStatus"
-                value="Pending"
-                checked={paymentStatus === 'Pending'}
-                onChange={() => setPaymentStatus('Pending')}
-                className="sr-only"
-              />
-              <span className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${paymentStatus === 'Pending'
-                ? 'border-cyan-400 bg-cyan-500/10 text-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.2)]'
-                : 'border-white/10 bg-slate-950/60 group-hover:border-white/20'
-                }`}>
-                {paymentStatus === 'Pending' && <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-scale-up" />}
-              </span>
-              <span>Pending</span>
-            </label>
-
-            {/* Paid option */}
-            <label className="flex items-center gap-2.5 cursor-pointer group text-xs font-semibold text-slate-300">
-              <input
-                type="radio"
-                name="paymentStatus"
-                value="Paid"
-                checked={paymentStatus === 'Paid'}
-                onChange={() => setPaymentStatus('Paid')}
-                className="sr-only"
-              />
-              <span className={`w-5 h-5 rounded-full border flex items-center justify-center transition-all ${paymentStatus === 'Paid'
-                ? 'border-cyan-400 bg-cyan-500/10 text-cyan-400 shadow-[0_0_8px_rgba(34,211,238,0.2)]'
-                : 'border-white/10 bg-slate-950/60 group-hover:border-white/20'
-                }`}>
-                {paymentStatus === 'Paid' && <span className="w-2.5 h-2.5 rounded-full bg-cyan-400 animate-scale-up" />}
-              </span>
-              <span>Paid</span>
-            </label>
           </div>
         </div>
 
