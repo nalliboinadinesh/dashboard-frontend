@@ -1,9 +1,9 @@
 'use client';
 
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { useAuth } from '../../../store/AuthContext';
 import { TicketCategory } from '../../../types';
-import { Upload, Camera, Trash2, ArrowLeft, ChevronDown } from 'lucide-react';
+import { ArrowLeft, ChevronDown } from 'lucide-react';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
@@ -15,39 +15,10 @@ export default function RaiseTicketPage() {
   const [description, setDescription] = useState('');
   const [category, setCategory] = useState<TicketCategory>('Electrical');
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
-  const [imagePreview, setImagePreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isOpen, setIsOpen] = useState(false);
 
-  const fileInputRef = useRef<HTMLInputElement>(null);
-  const cameraInputRef = useRef<HTMLInputElement>(null);
-
   const categories: TicketCategory[] = ['Electrical', 'Water', 'Cleaning', 'Internet', 'Furniture', 'Food', 'Bathroom', 'Other'];
-
-  // Handle image file selection
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 5 * 1024 * 1024) {
-        showToast('Image size should be less than 5MB', 'error');
-        return;
-      }
-      setSelectedFile(file);
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        setImagePreview(reader.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  // Clear selected image
-  const removeImage = () => {
-    setSelectedFile(null);
-    setImagePreview(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    if (cameraInputRef.current) cameraInputRef.current.value = '';
-  };
 
   // Submit form
   const handleSubmit = async (e: React.FormEvent) => {
@@ -56,15 +27,10 @@ export default function RaiseTicketPage() {
 
     setIsSubmitting(true);
     try {
-      await raiseTicket(title, description, category, selectedFile);
-      // Clean form on success
+      await raiseTicket(title, description, category, null);
       setTitle('');
       setDescription('');
-      removeImage();
-      // Redirect to ticket history page after brief delay
-      setTimeout(() => {
-        router.push('/tickets/history');
-      }, 1000);
+      setTimeout(() => router.push('/tickets/history'), 1000);
     } catch (err) {
       console.error(err);
     } finally {
@@ -181,72 +147,6 @@ export default function RaiseTicketPage() {
               className="w-full py-3 px-4 rounded-xl text-slate-100 text-sm glow-input resize-none"
               disabled={isSubmitting}
             />
-          </div>
-
-          {/* Image upload / Camera capture */}
-          <div className="space-y-3">
-            <label className="text-xs font-bold text-slate-300 uppercase tracking-wider block">
-              Upload Reference Photos
-            </label>
-            
-            {imagePreview ? (
-              /* Image preview */
-              <div className="relative rounded-2xl overflow-hidden border border-white/10 bg-slate-950/40 p-2">
-                <img 
-                  src={imagePreview} 
-                  alt="Reference Preview" 
-                  className="w-full max-h-64 object-contain rounded-xl"
-                />
-                <button
-                  type="button"
-                  onClick={removeImage}
-                  className="absolute top-4 right-4 w-9 h-9 rounded-xl bg-rose-500/80 hover:bg-rose-600 backdrop-blur-sm flex items-center justify-center text-white transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
-              </div>
-            ) : (
-              /* No image selected inputs */
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Standard file picker */}
-                <button
-                  type="button"
-                  onClick={() => fileInputRef.current?.click()}
-                  className="flex items-center justify-center gap-3 p-5 rounded-2xl bg-slate-900/40 border border-dashed border-white/10 hover:border-cyan-500/30 hover:bg-slate-900 transition-all text-slate-300 text-sm font-semibold"
-                >
-                  <Upload className="w-5 h-5 text-cyan-400" />
-                  <span>Choose Photo</span>
-                  <input
-                    type="file"
-                    ref={fileInputRef}
-                    onChange={handleFileChange}
-                    accept="image/*"
-                    className="hidden"
-                  />
-                </button>
-
-                {/* Mobile Camera capture */}
-                <button
-                  type="button"
-                  onClick={() => cameraInputRef.current?.click()}
-                  className="flex items-center justify-center gap-3 p-5 rounded-2xl bg-slate-900/40 border border-dashed border-white/10 hover:border-purple-500/30 hover:bg-slate-900 transition-all text-slate-300 text-sm font-semibold"
-                >
-                  <Camera className="w-5 h-5 text-purple-400" />
-                  <span>Camera Capture</span>
-                  <input
-                    type="file"
-                    ref={cameraInputRef}
-                    onChange={handleFileChange}
-                    accept="image/*"
-                    capture="environment"
-                    className="hidden"
-                  />
-                </button>
-              </div>
-            )}
-            <p className="text-[10px] text-slate-500 italic">
-              * Support photo format: JPG, PNG, GIF. Max size: 5MB.
-            </p>
           </div>
 
           {/* Submit Button */}
