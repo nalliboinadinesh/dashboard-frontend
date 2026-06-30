@@ -16,20 +16,20 @@ export const Navbar: React.FC = () => {
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full glass-panel border-b border-white/5 backdrop-blur-md px-4 py-3 md:px-8 flex items-center justify-between">
+    <header className="sticky top-0 z-40 w-full bg-white border-b border-slate-200 px-4 py-3 md:px-8 flex items-center justify-between shadow-sm">
       {/* Left logo & title */}
       <div className="flex items-center gap-3">
         <Link href="/" className="flex items-center gap-2 group">
-          <div className="w-10 h-10 rounded-xl bg-slate-900 border border-white/10 flex items-center justify-center text-cyan-400 glow-shadow-cyan group-hover:scale-105 transition-all">
-            <Home className="w-5 h-5 drop-shadow-[0_0_8px_rgba(6,182,212,0.6)]" />
+          <div className="w-10 h-10 rounded-xl bg-[#0f3b75] text-white flex items-center justify-center group-hover:scale-105 transition-all shadow-md">
+            <Home className="w-5 h-5" />
           </div>
           <div>
             <div className="flex items-center gap-1">
-              <span className="font-bold text-lg text-slate-100 tracking-wider">
+              <span className="font-bold text-lg text-slate-900 tracking-wider">
                 {user?.hostelName || 'SOSA'}
               </span>
             </div>
-            <span className="text-[10px] font-medium text-cyan-400/80 uppercase tracking-widest">
+            <span className="text-[10px] font-bold text-[#0f3b75] uppercase tracking-widest">
               Tenant Portal
             </span>
           </div>
@@ -37,10 +37,10 @@ export const Navbar: React.FC = () => {
       </div>
 
       {/* Date showing - matching layout "This Month • May 2026" */}
-      <div className="hidden md:flex items-center gap-2 text-sm font-semibold text-slate-300">
+      <div className="hidden md:flex items-center gap-2 text-sm font-semibold text-slate-500">
         <span>This Month</span>
-        <span className="w-1.5 h-1.5 rounded-full bg-slate-700"></span>
-        <span className="text-cyan-400">{getFormattedDate()}</span>
+        <span className="w-1.5 h-1.5 rounded-full bg-slate-300"></span>
+        <span className="text-[#0f3b75] font-bold">{getFormattedDate()}</span>
       </div>
 
       {/* Right icons */}
@@ -48,10 +48,10 @@ export const Navbar: React.FC = () => {
         {/* Mini user profile initials badge */}
         {user && (
           <Link href="/profile" className="flex items-center gap-2 group">
-            <div className="w-8 h-8 rounded-full bg-cyan-500/10 border border-cyan-500/30 flex items-center justify-center text-xs font-bold text-cyan-400 group-hover:bg-cyan-500/20 transition-all">
+            <div className="w-8 h-8 rounded-full bg-[#f0f4f8] border border-[#0f3b75]/20 flex items-center justify-center text-xs font-bold text-[#0f3b75] group-hover:bg-[#0f3b75] group-hover:text-white transition-all">
               {user.name.split(' ').map((n: string) => n[0]).join('').substring(0, 2).toUpperCase()}
             </div>
-            <span className="hidden lg:inline text-xs font-semibold text-slate-300 group-hover:text-white transition-colors truncate max-w-[100px]">
+            <span className="hidden lg:inline text-xs font-semibold text-slate-600 group-hover:text-slate-900 transition-colors truncate max-w-[100px]">
               {user.name.split(' ')[0]}
             </span>
           </Link>
