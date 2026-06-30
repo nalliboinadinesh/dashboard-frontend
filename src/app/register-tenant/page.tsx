@@ -254,11 +254,11 @@ function RegisterTenantForm() {
   if (!hostelId || !token || !expiresAtParam) {
     return (
       <div className="w-full max-w-md mx-auto glass-panel p-8 text-center space-y-6">
-        <div className="w-16 h-16 mx-auto rounded-full bg-rose-50 flex items-center justify-center border border-rose-100">
-          <X className="w-8 h-8 text-rose-500" />
+        <div className="w-20 h-20 mx-auto rounded-full bg-rose-50 flex items-center justify-center border border-rose-100">
+          <X className="w-10 h-10 text-rose-500" />
         </div>
-        <div className="space-y-2">
-          <h2 className="text-xl font-extrabold text-[#0f3b75]">Invalid Registration Link</h2>
+        <div className="space-y-3">
+          <h2 className="text-2xl font-extrabold text-[#0f3b75]">Invalid Link</h2>
           <p className="text-slate-500 text-sm leading-relaxed">
             This QR code link is malformed or invalid. Please scan the QR code provided in the Admin Portal to register.
           </p>
@@ -271,15 +271,15 @@ function RegisterTenantForm() {
   if (hasExpired || (timeLeft !== null && timeLeft <= 0)) {
     return (
       <div className="w-full max-w-md mx-auto glass-panel p-8 text-center space-y-6">
-        <div className="w-16 h-16 mx-auto rounded-full bg-amber-50 flex items-center justify-center border border-amber-100">
-          <ShieldAlert className="w-8 h-8 text-amber-500 animate-pulse" />
+        <div className="w-20 h-20 mx-auto rounded-full bg-amber-50 flex items-center justify-center border border-amber-100">
+          <ShieldAlert className="w-10 h-10 text-amber-500 animate-pulse" />
         </div>
-        <div className="space-y-2">
-          <h2 className="text-xl font-extrabold text-[#0f3b75]">Registration Link Expired</h2>
+        <div className="space-y-3">
+          <h2 className="text-2xl font-extrabold text-[#0f3b75]">Link Expired</h2>
           <p className="text-slate-500 text-sm leading-relaxed">
             For security reasons, hostel registration links are valid for 15 minutes only.
           </p>
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-700 font-medium mt-4">
+          <div className="p-4 bg-[#f0f4f8] border border-[#0f3b75]/10 rounded-2xl text-xs text-[#0f3b75] font-bold mt-4">
             Please ask the hostel manager to generate a new QR code and scan it again.
           </div>
         </div>
@@ -299,11 +299,11 @@ function RegisterTenantForm() {
           <p className="text-slate-500 text-sm leading-relaxed">
             Your details have been successfully submitted to the hostel management system.
           </p>
-          <div className="p-4 bg-slate-50 border border-slate-200 rounded-2xl text-xs text-slate-700 font-medium leading-relaxed mt-4">
+          <div className="p-4 bg-[#f0f4f8] border border-[#0f3b75]/10 rounded-2xl text-xs text-[#0f3b75] font-bold leading-relaxed mt-4">
             After the administrator reviews and accepts your profile, your login credentials will be emailed to you.
           </div>
         </div>
-        <p className="text-xs font-bold text-slate-400 pt-4 border-t border-slate-200">
+        <p className="text-xs font-bold text-slate-400 pt-4 border-t border-slate-100">
           You may now close this page.
         </p>
       </div>
